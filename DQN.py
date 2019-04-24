@@ -1,9 +1,6 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[22]:
-
-
 import gym
 import numpy as np
 import collections 
@@ -13,16 +10,13 @@ from keras.optimizers import Adam
 import random
 
 
-# In[23]:
-
-
 class DQNAgent:
     def __init__(self, state_size,action_size):
         self.state_size = state_size
         self.action_size = action_size
         self.memory = collections.deque(maxlen=2000)
-        self.gamma = 0.95    # discount rate
-        self.epsilon = 1.0  # exploration rate
+        self.gamma = 0.99    
+        self.epsilon = 1.0  
         self.epsilon_min = 0.01
         self.epsilon_decay = 0.995
         self.learning_rate = 0.001
@@ -30,8 +24,7 @@ class DQNAgent:
     
     def _build_model(self):
         model = Sequential()
-        model.add(Dense(24, input_dim=self.state_size, activation='relu'))
-        model.add(Dense(24, activation='relu'))
+        model.add(Dense(20, input_dim=self.state_size, activation='relu'))
         model.add(Dense(self.action_size, activation='linear'))
         model.compile(loss='mse',
                       optimizer=Adam(lr=self.learning_rate))
@@ -49,16 +42,26 @@ class DQNAgent:
         return np.argmax(act_values[0])
     
     def replay(self,batch_size):
+        
         minibatch = random.sample(self.memory, batch_size)
+        states = []
+        targets = []
+        
         for state, action, reward, next_state, done in minibatch:
+            states.append(state[0])
             target_True = reward
             if not done:
                 target_True = (reward + self.gamma * np.amax(self.model.predict(next_state)[0]))
             traget_Current = self.model.predict(state)
             traget_Current[0][action] = target_True
-            self.model.fit(state, traget_Current, epochs=1, verbose=0)
+            targets.append(traget_Current[0])
+            
+        history = self.model.fit(np.array(states), np.array(targets),batch_size = batch_size, epochs=1, verbose=0)
+        loss = history.history['loss'][0]
+        
         if self.epsilon > self.epsilon_min:
-            self.epsilon *= self.epsilon_decay
+            self.epsilon -= (1.0 - self.epsilon_min)/10000
+        return loss
             
     def training(self,reward,state,next_state,done):
         if not done:
@@ -68,9 +71,12 @@ class DQNAgent:
         target_Current = self.model.predict(state)
         target_Current[0][action] = target_True
         self.model.fit(state, target_Current, epochs=1, verbose=0)
+    
+    def load(self, name):
+        self.model.load_weights(name)
 
-
-# In[24]:
+    def save(self, name):
+        self.model.save_weights(name)
 
 
 env = gym.make('CartPole-v1')
@@ -79,15 +85,10 @@ stateSize = env.observation_space.shape[0]
 agent = DQNAgent(stateSize,actsize)
 
 
-# In[25]:
-
-
 episodes = 5000
 maxtimesteps = 500
 replay_batchsize = 32
 
-
-# In[ ]:
 
 
 for i in range(episodes):
@@ -108,22 +109,22 @@ for i in range(episodes):
                       .format(i, episodes, step))
                 break
         if len(agent.memory) > replay_batchsize:
-            agent.replay(replay_batchsize)
+            loss = agent.replay(replay_batchsize)
 
 
-# In[ ]:
+agent.epsilon = 0
+state = env.reset() 
+for t in range(1000):
+    state = np.reshape(state, [1, stateSize])
+    env.render()
+    action = agent.act(state)
+    next_state, reward, done, _ = env.step(action)
+    if done:
+        print('Failed at {}'.format(t))
+        break;
+    state = next_state
 
 
-
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
 
 
 
