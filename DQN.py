@@ -15,8 +15,8 @@ class DQNAgent:
         self.state_size = state_size
         self.action_size = action_size
         self.memory = collections.deque(maxlen=2000)
-        self.gamma = 0.99    
-        self.epsilon = 1.0  
+        self.gamma = 0.9    
+        self.epsilon = 0.5
         self.epsilon_min = 0.01
         self.epsilon_decay = 0.995
         self.learning_rate = 0.001
@@ -35,9 +35,13 @@ class DQNAgent:
             self.memory.popleft()
         self.memory.append((state, action, reward, next_state, done))
     
-    def act(self,state):
+    def greedy_act(self,state):
         if np.random.rand() <= self.epsilon:
             return random.randrange(self.action_size)
+        act_values = self.model.predict(state)
+        return np.argmax(act_values[0])
+    
+    def act(self,state):
         act_values = self.model.predict(state)
         return np.argmax(act_values[0])
     
@@ -60,7 +64,8 @@ class DQNAgent:
         loss = history.history['loss'][0]
         
         if self.epsilon > self.epsilon_min:
-            self.epsilon -= (1.0 - self.epsilon_min)/10000
+            self.epsilon -= (0.5 - self.epsilon_min)/10000
+            #self.epsilon *= self.epsilon_decay
         return loss
             
     def training(self,reward,state,next_state,done):
@@ -85,10 +90,9 @@ stateSize = env.observation_space.shape[0]
 agent = DQNAgent(stateSize,actsize)
 
 
-episodes = 5000
-maxtimesteps = 500
+episodes = 1000
+maxtimesteps = 200
 replay_batchsize = 32
-
 
 
 for i in range(episodes):
@@ -96,7 +100,7 @@ for i in range(episodes):
     state = np.reshape(state, [1, stateSize])
     for step in range(maxtimesteps):
         #env.render()
-        action = agent.act(state)
+        action = agent.greedy_act(state)
         next_state, reward, done, _ = env.step(action)
         reward = reward if not done else -10
         next_state = np.reshape(next_state, [1, stateSize])
@@ -109,23 +113,22 @@ for i in range(episodes):
                       .format(i, episodes, step))
                 break
         if len(agent.memory) > replay_batchsize:
-            loss = agent.replay(replay_batchsize)
-
-
-agent.epsilon = 0
-state = env.reset() 
-for t in range(1000):
-    state = np.reshape(state, [1, stateSize])
-    env.render()
-    action = agent.act(state)
-    next_state, reward, done, _ = env.step(action)
-    if done:
-        print('Failed at {}'.format(t))
-        break;
-    state = next_state
+            agent.replay(replay_batchsize)
 
 
 
+agent.save('cartpole_weights200steps')
 
 
-
+for epsiod in range(100):
+    state = env.reset()
+    for t in range(500):
+        state = np.reshape(state, [1, stateSize])
+        env.render()
+        action = agent.act(state)
+        next_state, reward, done, _ = env.step(action)
+        if done:
+            print('Failed at {}'.format(t))
+            break;
+        state = next_state
+env.close()
