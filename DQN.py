@@ -11,7 +11,7 @@ import random
 
 
 class DQNAgent:
-    def __init__(self, state_size,action_size):
+    def __init__(self, state_size,action_size,supportDDQN = False, Ratio = 20):
         self.state_size = state_size
         self.action_size = action_size
         self.memory = collections.deque(maxlen=2000)
@@ -20,7 +20,12 @@ class DQNAgent:
         self.epsilon_min = 0.01
         self.epsilon_decay = 0.995
         self.learning_rate = 0.001
+        self.support_DDQN = supportDDQN
+        self.ddqupdateRatio = Ratio
         self.model = self._build_model()
+        if supportDDQN:
+            self.target_model = self._build_model()
+            self.target_model.set_weights(self.model.get_weights()) 
     
     def _build_model(self):
         model = Sequential()
@@ -55,7 +60,10 @@ class DQNAgent:
             states.append(state[0])
             target_True = reward
             if not done:
-                target_True = (reward + self.gamma * np.amax(self.model.predict(next_state)[0]))
+                if not supportDDQN:
+                    target_True = (reward + self.gamma * np.amax(self.model.predict(next_state)[0]))
+                else:
+                    target_True = (reward + self.gamma * np.amax(self.target_model.predict(next_state)[0]))
             traget_Current = self.model.predict(state)
             traget_Current[0][action] = target_True
             targets.append(traget_Current[0])
@@ -70,7 +78,10 @@ class DQNAgent:
             
     def training(self,reward,state,next_state,done):
         if not done:
-            target_True = reward + self.gamma * (np.amax(self.model.predict(next_state)[0]))
+            if not supportDDQN:
+                target_True = reward + self.gamma * (np.amax(self.model.predict(next_state)[0]))
+            else:
+                target_True = reward + self.gamma * (np.amax(self.traget_model.predict(next_state)[0]))
         else:
             target_True = reward
         target_Current = self.model.predict(state)
@@ -94,7 +105,7 @@ episodes = 1000
 maxtimesteps = 200
 replay_batchsize = 32
 
-
+count =0
 for i in range(episodes):
     state = env.reset()
     state = np.reshape(state, [1, stateSize])
@@ -113,7 +124,11 @@ for i in range(episodes):
                       .format(i, episodes, step))
                 break
         if len(agent.memory) > replay_batchsize:
+            count += 1
             agent.replay(replay_batchsize)
+            if count % self.ddqupdateRatio == 0:
+                self.target_model.set_weights(self.model.get_weights()) 
+     
 
 
 
