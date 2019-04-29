@@ -29,7 +29,8 @@ class DQNAgent:
     
     def _build_model(self):
         model = Sequential()
-        model.add(Dense(20, input_dim=self.state_size, activation='relu'))
+        model.add(Dense(16, input_dim=self.state_size, activation='relu'))
+        model.add(Dense(16, activation='relu'))
         model.add(Dense(self.action_size, activation='linear'))
         model.compile(loss='mse',
                       optimizer=Adam(lr=self.learning_rate))
@@ -101,8 +102,8 @@ stateSize = env.observation_space.shape[0]
 agent = DQNAgent(stateSize,actsize,supportDDQN = True)
 
 
-episodes = 3000
-maxtimesteps = 500
+episodes = 1000
+maxtimesteps = 200
 replay_batchsize = 32
 
 count =0
@@ -116,7 +117,7 @@ for i in range(episodes):
         reward = reward if not done else -10
         next_state = np.reshape(next_state, [1, stateSize])
         agent.remember(state, action, reward, next_state, done)
-        agent.training(reward,state,next_state,done)
+        #agent.training(reward,state,next_state,done)
         state = next_state
         if done:
                 # print the score and break out of the loop
