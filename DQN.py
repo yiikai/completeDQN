@@ -60,7 +60,7 @@ class DQNAgent:
             states.append(state[0])
             target_True = reward
             if not done:
-                if not supportDDQN:
+                if not self.support_DDQN:
                     target_True = (reward + self.gamma * np.amax(self.model.predict(next_state)[0]))
                 else:
                     target_True = (reward + self.gamma * np.amax(self.target_model.predict(next_state)[0]))
@@ -78,10 +78,10 @@ class DQNAgent:
             
     def training(self,reward,state,next_state,done):
         if not done:
-            if not supportDDQN:
+            if not self.support_DDQN:
                 target_True = reward + self.gamma * (np.amax(self.model.predict(next_state)[0]))
             else:
-                target_True = reward + self.gamma * (np.amax(self.traget_model.predict(next_state)[0]))
+                target_True = reward + self.gamma * (np.amax(self.target_model.predict(next_state)[0]))
         else:
             target_True = reward
         target_Current = self.model.predict(state)
@@ -98,11 +98,11 @@ class DQNAgent:
 env = gym.make('CartPole-v1')
 actsize = env.action_space.n
 stateSize = env.observation_space.shape[0]
-agent = DQNAgent(stateSize,actsize)
+agent = DQNAgent(stateSize,actsize,supportDDQN = True)
 
 
-episodes = 1000
-maxtimesteps = 200
+episodes = 3000
+maxtimesteps = 500
 replay_batchsize = 32
 
 count =0
@@ -126,8 +126,9 @@ for i in range(episodes):
         if len(agent.memory) > replay_batchsize:
             count += 1
             agent.replay(replay_batchsize)
-            if count % self.ddqupdateRatio == 0:
-                self.target_model.set_weights(self.model.get_weights()) 
+            if count % agent.ddqupdateRatio == 0:
+                agent.target_model.set_weights(agent.model.get_weights()) 
+
      
 
 
