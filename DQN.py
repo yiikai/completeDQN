@@ -8,8 +8,7 @@ from keras.models import Sequential
 from keras.layers import Dense, Activation
 from keras.optimizers import Adam
 import random
-from PriorityMemory import Memory
-
+from Prioritybuffer import Memory
 
 class DQNAgent:
     def __init__(self, state_size,action_size,supportDDQN = False,
@@ -83,7 +82,6 @@ class DQNAgent:
         return loss
         
     def prior_replay(self,minibatch,ISWeights):
-        
         states = []
         targets = []
         for state, action, reward, next_state in minibatch:
@@ -152,7 +150,8 @@ for i in range(episodes):
         reward = reward if not done else -10
         next_state = np.reshape(next_state, [1, stateSize])
         if agent.support_priority:
-            transition = np.hstack((state, np.array([action, reward]).reshape(1,-1), next_state))
+            #transition = np.hstack((state, np.array([action, reward]).reshape(1,-1), next_state))
+            transition = (state,action,reward,next_state)
             agent.priorBuffer.store(transition)
             #agent.priorBuffer.store((state, action, reward, next_state, done))
         else:
@@ -176,9 +175,6 @@ for i in range(episodes):
                 agent.replay(replay_batchsize)
                 if count % agent.ddqupdateRatio == 0:
                     agent.target_model.set_weights(agent.model.get_weights()) 
-
-     
-
 
 
 agent.save('cartpole_weights200steps')
