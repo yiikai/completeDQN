@@ -40,7 +40,6 @@ class Memory(object):  # stored as ( s, a, r, s_ ) in SumTree
         return b_idx, b_memory, ISWeights
 
     def batch_update(self, tree_idx, abs_errors):
-        abs_errors += self.epsilon  # convert to abs and avoid 0
         clipped_errors = np.minimum(abs_errors, self.abs_err_upper)
         ps = np.power(clipped_errors, self.alpha)
         for ti, p in zip(tree_idx, ps):
